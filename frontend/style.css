@@ -1,0 +1,11 @@
+body {
+    background-color: #f5f7fa;
+}
+
+textarea {
+    resize: vertical;
+}
+
+#result {
+    min-height: 50px;
+}
