@@ -1,20 +1,37 @@
-const runButton = document.getElementById("runButton");
 
 const taskInput = document.getElementById("taskInput");
-
+const runButton = document.getElementById("runButton");
 const result = document.getElementById("result");
 
+runButton.addEventListener("click", runAgent);
 
-runButton.addEventListener("click", async function () {
-
+async function runAgent() {
     const task = taskInput.value;
 
-    result.innerText = "Connecting to backend...";
+    if (task.trim() === "") {
+        result.textContent = "Please enter a task.";
+        return;
+    }
 
-    const response = await fetch("http://127.0.0.1:8000/");
+    result.textContent = "Sending task to backend...";
 
-    const data = await response.json();
+    try {
+        const response = await fetch("http://127.0.0.1:8000/agent", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                task: task
+            })
+        });
 
-    result.innerText = data.message;
+        const data = await response.json();
 
-});
+        result.textContent = data.message;
+
+    } catch (error) {
+        result.textContent = "Could not connect to the backend.";
+        console.error(error);
+    }
+}
