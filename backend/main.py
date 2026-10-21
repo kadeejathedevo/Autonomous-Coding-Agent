@@ -1,15 +1,44 @@
 from pathlib import Path
+import os
+import re
+import uuid
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from google import genai
 
 
-# Create the FastAPI application.
-app = FastAPI()
+# ----------------------------------
+# 1. Project paths and environment
+# ----------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / ".env")
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 
-# Allow the frontend to communicate with the backend.
+# ----------------------------------
+# 2. Create FastAPI application
+# ----------------------------------
+
+app = FastAPI(
+    title="Autonomous Coding Agent",
+    description="An AI agent that generates Python code from tasks.",
+    version="1.0"
+)
+
+
+# ----------------------------------
+# 3. Allow frontend communication
+# ----------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -21,19 +50,25 @@ app.add_middleware(
 )
 
 
-# Define the data expected from the frontend.
+# ----------------------------------
+# 4. Incoming request
+# ----------------------------------
+
 class AgentRequest(BaseModel):
     task: str
 
 
-# Find the main project directory.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# ----------------------------------
+# 5. Workspace folder
+# ----------------------------------
 
-# Define the folder where generated files will be saved.
 WORKSPACE = BASE_DIR / "workspace"
 
 
-# Test whether the backend is running.
+# ----------------------------------
+# 6. Root route
+# ----------------------------------
+
 @app.get("/")
 def home():
     return {
@@ -41,83 +76,134 @@ def home():
     }
 
 
-# Generate code based on the user's task.
+# ----------------------------------
+# 7. Generate code using Gemini
+# ----------------------------------
+
 def generate_code(task: str):
 
-    if "calculator" in task.lower():
+    if client is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Gemini API key is missing. Check your .env file."
+        )
 
-        filename = "calculator.py"
+    prompt = f"""
+You are a Python coding assistant.
 
-        code = '''def add(a, b):
-    return a + b
+Generate a complete Python program for this task:
+
+{task}
+
+Instructions:
+- Return only Python source code.
+- Do not include explanations.
+- Do not use Markdown code fences.
+- Make the program complete and runnable.
+- Do not include code that deletes files or accesses secrets.
+"""
+
+    try:
+
+        # Ask Gemini to generate code
+        response = client.interactions.create(
+            model=MODEL,
+            input=prompt,
+        )
+
+        code = response.output_text
+
+        if not code:
+            raise HTTPException(
+                status_code=502,
+                detail="Gemini returned an empty response."
+            )
+
+        code = code.strip()
+
+        # Remove Markdown code fences
+        code = re.sub(
+            r"^```(?:python)?\s*",
+            "",
+            code,
+            flags=re.IGNORECASE
+        )
+
+        code = re.sub(
+            r"\s*```$",
+            "",
+            code
+        )
+
+        # Return the generated code
+        return code
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+
+        print("Gemini generation error:", error)
+
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini could not generate code. Check your API key, model and quota."
+        )
 
 
-def subtract(a, b):
-    return a - b
+# ----------------------------------
+# 8. Create a different file
+#    for every generated program
+# ----------------------------------
 
+def create_file(code: str):
 
-def multiply(a, b):
-    return a * b
-
-
-def divide(a, b):
-    if b == 0:
-        return "Cannot divide by zero"
-    return a / b
-
-
-print("Calculator")
-print("Addition:", add(10, 5))
-print("Subtraction:", subtract(10, 5))
-print("Multiplication:", multiply(10, 5))
-print("Division:", divide(10, 5))
-'''
-
-        return filename, code
-
-    # We only support calculator tasks for now.
-    raise HTTPException(
-        status_code=400,
-        detail="Currently, I can only generate a calculator."
+    # Create workspace if it does not exist
+    WORKSPACE.mkdir(
+        parents=True,
+        exist_ok=True
     )
 
+    # Generate a unique ID for this file
+    unique_id = uuid.uuid4().hex[:8]
 
-# Create a file and write the generated code into it.
-def create_file(filename: str, code: str):
+    # Create a unique filename
+    filename = f"generated_{unique_id}.py"
 
-    # Ensure the workspace folder exists.
-    WORKSPACE.mkdir(exist_ok=True)
-
-    # Create the file path.
+    # Create the full file path
     file_path = WORKSPACE / filename
 
-    # Save the generated code.
-    file_path.write_text(code, encoding="utf-8")
+    # Save the generated code
+    file_path.write_text(
+        code,
+        encoding="utf-8"
+    )
 
-    return file_path
+    return filename, file_path
 
 
-# Receive a task from the frontend.
+# ----------------------------------
+# 9. Main agent endpoint
+# ----------------------------------
+
 @app.post("/agent")
 def run_agent(request: AgentRequest):
 
-    # Extract the task text.
     task = request.task.strip()
 
-    # Check whether the user entered a task.
     if not task:
         raise HTTPException(
             status_code=400,
             detail="Please enter a task."
         )
 
-    # Step 1: Generate the code.
-    filename, code = generate_code(task)
+    # Generate code
+    code = generate_code(task)
 
-    # Step 2: Create the file.
-    file_path = create_file(filename, code)
+    # Save in a new file
+    filename, file_path = create_file(code)
 
-    # Step 3: Return the result to the frontend.
+    # Send the code and filename to frontend
     return {
         "message": f"File created successfully: {filename}",
         "status": "created",

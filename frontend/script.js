@@ -2,31 +2,29 @@ const taskInput = document.getElementById("taskInput");
 const runButton = document.getElementById("runButton");
 const result = document.getElementById("result");
 
-
-// Run the agent when the button is clicked.
+// When the user clicks the button, run the agent
 runButton.addEventListener("click", runAgent);
-
 
 async function runAgent() {
 
-    // Get the task entered by the user.
+    // Get the task entered by the user
     const task = taskInput.value.trim();
 
-    // Check whether the task is empty.
+    // Check if the user entered anything
     if (task === "") {
         result.textContent = "Please enter a task.";
         return;
     }
 
-    // Show a message while the backend is working.
-    result.textContent = "Generating your file...";
+    // Show loading message
+    result.textContent = "Gemini is generating your code...";
 
-    // Prevent multiple clicks while processing.
+    // Disable button while the request is running
     runButton.disabled = true;
 
     try {
 
-        // Send the task to the backend.
+        // Send the task to FastAPI backend
         const response = await fetch(
             "http://127.0.0.1:8000/agent",
             {
@@ -42,30 +40,36 @@ async function runAgent() {
             }
         );
 
-        // Convert the backend response into JavaScript data.
+        // Convert backend response into JavaScript data
         const data = await response.json();
 
-        // Display backend errors.
+        // Check whether backend returned an error
         if (!response.ok) {
-            result.textContent = data.detail;
+            result.textContent =
+                data.detail || "Code generation failed.";
             return;
         }
 
-        // Display the success message and generated code.
+        // Display the generated code in the frontend
         result.textContent =
-            data.message + "\n\n" + data.code;
+            data.message +
+            "\n\n" +
+            data.code;
+
+        // Log the response for debugging
+        console.log("Backend response:", data);
 
     } catch (error) {
 
-        // Display an error if the backend cannot be reached.
+        // Display connection or JavaScript errors
         result.textContent =
-            "Could not connect to the backend.";
+            "Could not connect to the backend. Check the browser console.";
 
-        console.error(error);
+        console.error("Frontend error:", error);
 
     } finally {
 
-        // Enable the button again after processing.
+        // Enable button again
         runButton.disabled = false;
     }
 }

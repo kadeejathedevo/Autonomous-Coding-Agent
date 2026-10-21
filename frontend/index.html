@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Autonomous Coding Agent</title>
 
@@ -11,27 +16,36 @@
 
 <body>
 
-    <h1>Autonomous Coding Agent</h1>
+    <main class="container">
 
-    <label for="taskInput">
-        What do you want me to build?
-    </label>
+        <h1>Autonomous Coding Agent</h1>
 
-    <input
-        id="taskInput"
-        type="text"
-        placeholder="Create a calculator in Python"
-    >
+        <p>
+            Enter a task and let the AI generate Python code.
+        </p>
 
-    <button id="runButton" type="button">
-        Run Agent
-    </button>
+        <label for="taskInput">
+            What do you want me to build?
+        </label>
 
-    <h2>Agent Output</h2>
+        <input
+            id="taskInput"
+            type="text"
+            placeholder="Create a calculator in Python"
+        >
 
-    <pre id="result">Your generated code will appear here.</pre>
+        <button id="runButton" type="button">
+            Run Agent
+        </button>
+
+        <h2>Agent Output</h2>
+
+        <pre id="result">Your generated code will appear here.</pre>
+
+    </main>
 
     <script src="script.js"></script>
 
 </body>
+
 </html>
