@@ -1,15 +1,21 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Autonomous Coding Agent</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
     <h1>Autonomous Coding Agent</h1>
 
-    <label for="taskInput">What do you want me to build?</label>
+    <label for="taskInput">
+        What do you want me to build?
+    </label>
 
     <input
         id="taskInput"
@@ -17,10 +23,15 @@
         placeholder="Create a calculator in Python"
     >
 
-    <button id="runButton">Run Agent</button>
+    <button id="runButton" type="button">
+        Run Agent
+    </button>
 
-    <p id="result"></p>
+    <h2>Agent Output</h2>
+
+    <pre id="result">Your generated code will appear here.</pre>
 
     <script src="script.js"></script>
+
 </body>
 </html>
